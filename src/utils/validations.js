@@ -70,3 +70,19 @@ export const validateSignup = (fullName, username, email, password, confirmPassw
     isValid: !fullNameError && !usernameError && !emailError && !passwordError && !confirmPasswordError,
   };
 };
+
+// Utility function to validate all fields at once
+export const validateAllFields = (fields, validationRules) => {
+  const errors = {};
+  let isValid = true;
+
+  Object.keys(validationRules).forEach((field) => {
+    const error = validationRules[field](fields[field], fields);
+    if (error) {
+      errors[field] = error;
+      isValid = false;
+    }
+  });
+
+  return { errors, isValid };
+};

@@ -1,114 +1,94 @@
-import { useState } from "react";
+import { useReducer } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Box, TextField, Button, Typography, Alert } from "@mui/material";
 import { LockOutlined } from "@mui/icons-material";
 import AuthFooter from "../components/Common/AuthFooter";
 import { validateSignup } from "../utils/validations";
+import { formReducer, createInitialState } from "../utils/formReducer";
+
+const initialValues = {
+  fullName: "",
+  username: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+};
 
 const Signup = () => {
-  const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState("");
+  const [state, dispatch] = useReducer(formReducer, createInitialState(initialValues));
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  const handleChange = (field, value) => {
+    // Auto-convert username to lowercase
+    const finalValue = field === "username" ? value.toLowerCase() : value;
+    dispatch({ type: "SET_FIELD", field, value: finalValue });
+    // Clear field error when user starts typing
+    if (state.errors[field]) {
+      dispatch({ type: "SET_FIELD_ERROR", field, error: "" });
+    }
+  };
+
   const handleBlur = (field, value) => {
     const validation = validateSignup(
-      field === "fullName" ? value : fullName,
-      field === "username" ? value : username,
-      field === "email" ? value : email,
-      field === "password" ? value : password,
-      field === "confirmPassword" ? value : confirmPassword,
+      field === "fullName" ? value : state.values.fullName,
+      field === "username" ? value : state.values.username,
+      field === "email" ? value : state.values.email,
+      field === "password" ? value : state.values.password,
+      field === "confirmPassword" ? value : state.values.confirmPassword,
     );
-    setErrors((prev) => ({ ...prev, [field]: validation[field] }));
+    dispatch({ type: "SET_FIELD_ERROR", field, error: validation[field] });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const { fullName, username, email, password, confirmPassword } = state.values;
     const validation = validateSignup(fullName, username, email, password, confirmPassword);
 
     if (!validation.isValid) {
-      setErrors({
-        fullName: validation.fullName,
-        username: validation.username,
-        email: validation.email,
-        password: validation.password,
-        confirmPassword: validation.confirmPassword,
+      dispatch({
+        type: "SET_ERRORS",
+        errors: {
+          fullName: validation.fullName,
+          username: validation.username,
+          email: validation.email,
+          password: validation.password,
+          confirmPassword: validation.confirmPassword,
+        },
       });
       return;
     }
 
-    setServerError("");
-    setLoading(true);
+    dispatch({ type: "SET_SERVER_ERROR", error: "" });
+    dispatch({ type: "SET_LOADING", isLoading: true });
 
     try {
       await signup(fullName, username, email, password);
       navigate("/");
     } catch (err) {
-      setServerError(err.message || "Signup failed");
+      dispatch({ type: "SET_SERVER_ERROR", error: err.message || "Signup failed" });
     } finally {
-      setLoading(false);
+      dispatch({ type: "SET_LOADING", isLoading: false });
     }
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        width: "100%",
-        maxWidth: "400px",
-        mx: "auto",
-      }}
-    >
+    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", maxWidth: "400px", mx: "auto" }}>
       <Box sx={{ textAlign: "center", mb: 2 }}>
-        <Typography
-          sx={{
-            fontSize: "28px",
-            fontWeight: "bold",
-            color: "#131921",
-            letterSpacing: "-0.5px",
-            display: "inline-block",
-          }}
-        >
-          ShopSphere
-        </Typography>
-        <Typography
-          component="span"
-          sx={{
-            fontSize: "12px",
-            color: "#ff9900",
-            fontWeight: "bold",
-            letterSpacing: "0.5px",
-            ml: 0.2,
-          }}
-        >
+        <Typography sx={{ fontSize: "28px", fontWeight: "bold", color: "#131921", letterSpacing: "-0.5px", display: "inline-block" }}>ShopSphere</Typography>
+        <Typography component="span" sx={{ fontSize: "12px", color: "#ff9900", fontWeight: "bold", letterSpacing: "0.5px", ml: 0.2 }}>
           .in
         </Typography>
       </Box>
 
-      <Box
-        sx={{
-          border: "1px solid #ddd",
-          borderRadius: "8px",
-          padding: "20px 26px",
-          backgroundColor: "white",
-          width: "100%",
-        }}
-      >
+      <Box sx={{ border: "1px solid #ddd", borderRadius: "8px", padding: "20px 26px", backgroundColor: "white", width: "100%" }}>
         <Typography sx={{ fontSize: "28px", fontWeight: "400", mb: 3, color: "#0f1111" }}>Create account</Typography>
 
-        {serverError && (
+        {state.serverError && (
           <Alert severity="error" sx={{ mb: 2, fontSize: "13px" }}>
-            {serverError}
+            {state.serverError}
           </Alert>
         )}
 
@@ -117,11 +97,11 @@ const Signup = () => {
           <TextField
             fullWidth
             placeholder="First and last name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            onBlur={() => handleBlur("fullName", fullName)}
-            error={!!errors.fullName}
-            helperText={errors.fullName}
+            value={state.values.fullName}
+            onChange={(e) => handleChange("fullName", e.target.value)}
+            onBlur={() => handleBlur("fullName", state.values.fullName)}
+            error={!!state.errors.fullName}
+            helperText={state.errors.fullName}
             variant="outlined"
             size="small"
             sx={{ mb: 2 }}
@@ -131,11 +111,11 @@ const Signup = () => {
           <TextField
             fullWidth
             placeholder="e.g., john_doe123"
-            value={username}
-            onChange={(e) => setUsername(e.target.value.toLowerCase())}
-            onBlur={() => handleBlur("username", username)}
-            error={!!errors.username}
-            helperText={errors.username || "This will be your unique identifier"}
+            value={state.values.username}
+            onChange={(e) => handleChange("username", e.target.value)}
+            onBlur={() => handleBlur("username", state.values.username)}
+            error={!!state.errors.username}
+            helperText={state.errors.username || "This will be your unique identifier"}
             variant="outlined"
             size="small"
             sx={{ mb: 2 }}
@@ -146,11 +126,11 @@ const Signup = () => {
             fullWidth
             type="email"
             placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onBlur={() => handleBlur("email", email)}
-            error={!!errors.email}
-            helperText={errors.email}
+            value={state.values.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            onBlur={() => handleBlur("email", state.values.email)}
+            error={!!state.errors.email}
+            helperText={state.errors.email}
             variant="outlined"
             size="small"
             sx={{ mb: 2 }}
@@ -161,11 +141,11 @@ const Signup = () => {
             fullWidth
             type="password"
             placeholder="At least 6 characters"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onBlur={() => handleBlur("password", password)}
-            error={!!errors.password}
-            helperText={errors.password}
+            value={state.values.password}
+            onChange={(e) => handleChange("password", e.target.value)}
+            onBlur={() => handleBlur("password", state.values.password)}
+            error={!!state.errors.password}
+            helperText={state.errors.password}
             variant="outlined"
             size="small"
             sx={{ mb: 1 }}
@@ -180,11 +160,11 @@ const Signup = () => {
             fullWidth
             type="password"
             placeholder="Re-enter your password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            onBlur={() => handleBlur("confirmPassword", confirmPassword)}
-            error={!!errors.confirmPassword}
-            helperText={errors.confirmPassword}
+            value={state.values.confirmPassword}
+            onChange={(e) => handleChange("confirmPassword", e.target.value)}
+            onBlur={() => handleBlur("confirmPassword", state.values.confirmPassword)}
+            error={!!state.errors.confirmPassword}
+            helperText={state.errors.confirmPassword}
             variant="outlined"
             size="small"
             sx={{ mb: 3 }}
@@ -193,7 +173,7 @@ const Signup = () => {
           <Button
             fullWidth
             type="submit"
-            disabled={loading}
+            disabled={state.isLoading}
             sx={{
               backgroundColor: "#ffd814",
               color: "#0f1111",
@@ -207,7 +187,7 @@ const Signup = () => {
               "&:disabled": { backgroundColor: "#ffd814", opacity: 0.5 },
             }}
           >
-            {loading ? "Creating account..." : "Create your ShopSphere account"}
+            {state.isLoading ? "Creating account..." : "Create your ShopSphere account"}
           </Button>
         </form>
 

@@ -1,130 +1,87 @@
-import { useState } from "react";
+import { useReducer } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Box, TextField, Button, Typography, Alert, Divider } from "@mui/material";
 import AuthFooter from "../components/Common/AuthFooter";
 import { validateLogin } from "../utils/validations";
+import { formReducer, createInitialState } from "../utils/formReducer";
+
+const initialValues = {
+  email: "",
+  password: "",
+};
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState("");
+  const [state, dispatch] = useReducer(formReducer, createInitialState(initialValues));
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const handleChange = (field, value) => {
+    dispatch({ type: "SET_FIELD", field, value });
+    // Clear field error when user starts typing
+    if (state.errors[field]) {
+      dispatch({ type: "SET_FIELD_ERROR", field, error: "" });
+    }
+  };
+
   const handleBlur = (field, value) => {
-    const validation = validateLogin(field === "email" ? value : email, field === "password" ? value : password);
-    setErrors((prev) => ({ ...prev, [field]: validation[field] }));
+    const validation = validateLogin(field === "email" ? value : state.values.email, field === "password" ? value : state.values.password);
+    dispatch({ type: "SET_FIELD_ERROR", field, error: validation[field] });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const { email, password } = state.values;
     const validation = validateLogin(email, password);
 
     if (!validation.isValid) {
-      setErrors({ email: validation.email, password: validation.password });
+      dispatch({ type: "SET_ERRORS", errors: { email: validation.email, password: validation.password } });
       return;
     }
 
-    setServerError("");
-    setLoading(true);
+    dispatch({ type: "SET_SERVER_ERROR", error: "" });
+    dispatch({ type: "SET_LOADING", isLoading: true });
 
     try {
       await login(email, password);
       navigate("/");
     } catch (err) {
-      setServerError(err.message || "Login failed");
+      dispatch({ type: "SET_SERVER_ERROR", error: err.message || "Login failed" });
     } finally {
-      setLoading(false);
+      dispatch({ type: "SET_LOADING", isLoading: false });
     }
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        width: "100%",
-        maxWidth: "350px",
-        mx: "auto",
-      }}
-    >
+    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", maxWidth: "350px", mx: "auto" }}>
       <Box sx={{ textAlign: "center", mb: 2 }}>
-        <Typography
-          sx={{
-            fontSize: "28px",
-            fontWeight: "bold",
-            color: "#131921",
-            letterSpacing: "-0.5px",
-            display: "inline-block",
-          }}
-        >
-          ShopSphere
-        </Typography>
-        <Typography
-          component="span"
-          sx={{
-            fontSize: "12px",
-            color: "#ff9900",
-            fontWeight: "bold",
-            letterSpacing: "0.5px",
-            ml: 0.2,
-          }}
-        >
+        <Typography sx={{ fontSize: "28px", fontWeight: "bold", color: "#131921", letterSpacing: "-0.5px", display: "inline-block" }}>ShopSphere</Typography>
+        <Typography component="span" sx={{ fontSize: "12px", color: "#ff9900", fontWeight: "bold", letterSpacing: "0.5px", ml: 0.2 }}>
           .in
         </Typography>
       </Box>
 
-      <Box
-        sx={{
-          border: "1px solid #ddd",
-          borderRadius: "8px",
-          padding: "20px 26px",
-          backgroundColor: "white",
-          width: "100%",
-        }}
-      >
-        <Typography
-          sx={{
-            fontSize: "28px",
-            fontWeight: "400",
-            mb: 3,
-            color: "#0f1111",
-          }}
-        >
-          Sign in
-        </Typography>
+      <Box sx={{ border: "1px solid #ddd", borderRadius: "8px", padding: "20px 26px", backgroundColor: "white", width: "100%" }}>
+        <Typography sx={{ fontSize: "28px", fontWeight: "400", mb: 3, color: "#0f1111" }}>Sign in</Typography>
 
-        {serverError && (
+        {state.serverError && (
           <Alert severity="error" sx={{ mb: 2, fontSize: "13px" }}>
-            {serverError}
+            {state.serverError}
           </Alert>
         )}
 
         <form onSubmit={handleSubmit}>
-          <Typography
-            sx={{
-              fontSize: "13px",
-              fontWeight: "700",
-              mb: 0.5,
-              color: "#0f1111",
-            }}
-          >
-            Email
-          </Typography>
+          <Typography sx={{ fontSize: "13px", fontWeight: "700", mb: 0.5, color: "#0f1111" }}>Email</Typography>
           <TextField
             fullWidth
             type="email"
             placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onBlur={() => handleBlur("email", email)}
-            error={!!errors.email}
-            helperText={errors.email}
+            value={state.values.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            onBlur={() => handleBlur("email", state.values.email)}
+            error={!!state.errors.email}
+            helperText={state.errors.email}
             variant="outlined"
             size="small"
             sx={{
@@ -132,39 +89,23 @@ const Login = () => {
               "& .MuiOutlinedInput-root": {
                 borderRadius: "4px",
                 backgroundColor: "white",
-                "& fieldset": {
-                  borderColor: "#888c8c",
-                },
-                "&:hover fieldset": {
-                  borderColor: "#007185",
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: "#007185",
-                  borderWidth: "2px",
-                },
+                "& fieldset": { borderColor: "#888c8c" },
+                "&:hover fieldset": { borderColor: "#007185" },
+                "&.Mui-focused fieldset": { borderColor: "#007185", borderWidth: "2px" },
               },
             }}
           />
 
-          <Typography
-            sx={{
-              fontSize: "13px",
-              fontWeight: "700",
-              mb: 0.5,
-              color: "#0f1111",
-            }}
-          >
-            Password
-          </Typography>
+          <Typography sx={{ fontSize: "13px", fontWeight: "700", mb: 0.5, color: "#0f1111" }}>Password</Typography>
           <TextField
             fullWidth
             type="password"
             placeholder="At least 6 characters"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onBlur={() => handleBlur("password", password)}
-            error={!!errors.password}
-            helperText={errors.password}
+            value={state.values.password}
+            onChange={(e) => handleChange("password", e.target.value)}
+            onBlur={() => handleBlur("password", state.values.password)}
+            error={!!state.errors.password}
+            helperText={state.errors.password}
             variant="outlined"
             size="small"
             sx={{
@@ -172,16 +113,9 @@ const Login = () => {
               "& .MuiOutlinedInput-root": {
                 borderRadius: "4px",
                 backgroundColor: "white",
-                "& fieldset": {
-                  borderColor: "#888c8c",
-                },
-                "&:hover fieldset": {
-                  borderColor: "#007185",
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: "#007185",
-                  borderWidth: "2px",
-                },
+                "& fieldset": { borderColor: "#888c8c" },
+                "&:hover fieldset": { borderColor: "#007185" },
+                "&.Mui-focused fieldset": { borderColor: "#007185", borderWidth: "2px" },
               },
             }}
           />
@@ -189,7 +123,7 @@ const Login = () => {
           <Button
             fullWidth
             type="submit"
-            disabled={loading}
+            disabled={state.isLoading}
             sx={{
               backgroundColor: "#ffd814",
               color: "#0f1111",
@@ -199,34 +133,19 @@ const Login = () => {
               padding: "8px",
               borderRadius: "20px",
               mb: 2,
-              "&:hover": {
-                backgroundColor: "#f7ca00",
-              },
-              "&:disabled": {
-                backgroundColor: "#ffd814",
-                opacity: 0.5,
-              },
+              "&:hover": { backgroundColor: "#f7ca00" },
+              "&:disabled": { backgroundColor: "#ffd814", opacity: 0.5 },
             }}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {state.isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
 
-        <Typography
-          sx={{
-            fontSize: "12px",
-            color: "#0f1111",
-            mb: 2,
-            lineHeight: 1.5,
-          }}
-        >
+        <Typography sx={{ fontSize: "12px", color: "#0f1111", mb: 2, lineHeight: 1.5 }}>
           By continuing, you agree to ShopSphere's{" "}
           <Link
             to="#"
-            style={{
-              color: "#0066c0",
-              textDecoration: "none",
-            }}
+            style={{ color: "#0066c0", textDecoration: "none" }}
             onMouseEnter={(e) => (e.target.style.textDecoration = "underline")}
             onMouseLeave={(e) => (e.target.style.textDecoration = "none")}
           >
@@ -235,10 +154,7 @@ const Login = () => {
           and{" "}
           <Link
             to="#"
-            style={{
-              color: "#0066c0",
-              textDecoration: "none",
-            }}
+            style={{ color: "#0066c0", textDecoration: "none" }}
             onMouseEnter={(e) => (e.target.style.textDecoration = "underline")}
             onMouseLeave={(e) => (e.target.style.textDecoration = "none")}
           >
@@ -250,11 +166,7 @@ const Login = () => {
         <Box sx={{ mb: 2 }}>
           <Link
             to="#"
-            style={{
-              color: "#0066c0",
-              fontSize: "12px",
-              textDecoration: "none",
-            }}
+            style={{ color: "#0066c0", fontSize: "12px", textDecoration: "none" }}
             onMouseEnter={(e) => (e.target.style.textDecoration = "underline")}
             onMouseLeave={(e) => (e.target.style.textDecoration = "none")}
           >
@@ -265,15 +177,7 @@ const Login = () => {
         <Divider sx={{ my: 2 }} />
 
         <Box sx={{ textAlign: "center", mb: 2 }}>
-          <Typography
-            sx={{
-              fontSize: "12px",
-              color: "#767676",
-              mb: 1,
-            }}
-          >
-            New to ShopSphere?
-          </Typography>
+          <Typography sx={{ fontSize: "12px", color: "#767676", mb: 1 }}>New to ShopSphere?</Typography>
           <Button
             fullWidth
             component={Link}
@@ -288,10 +192,7 @@ const Login = () => {
               borderColor: "#d5d9d9",
               color: "#0f1111",
               backgroundColor: "#ffffff",
-              "&:hover": {
-                backgroundColor: "#f7fafa",
-                borderColor: "#d5d9d9",
-              },
+              "&:hover": { backgroundColor: "#f7fafa", borderColor: "#d5d9d9" },
             }}
           >
             Create your ShopSphere account
