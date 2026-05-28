@@ -1,13 +1,21 @@
 /* eslint-disable no-unused-vars */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardMedia, Typography, Box, Rating, Button, Skeleton, IconButton } from "@mui/material";
+import { useCart } from "../../hooks/useCart";
+import { Card, CardContent, Typography, Box, Rating, Button, Skeleton, IconButton } from "@mui/material";
 import { ShoppingCartOutlined, FavoriteBorder, Favorite } from "@mui/icons-material";
 
-const ProductCard = ({ product, onAddToCart, loading = false }) => {
+const ProductCard = ({ product, loading = false }) => {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const { addToCart } = useCart();
+
+  const productImage = product?.image_url;
+  const productTitle = product?.title;
+  const productPrice = product?.price || 0;
+  const productRating = product?.rating || 0;
+  const productRatingCount = product?.rating_count || 0;
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-IN", {
@@ -22,9 +30,9 @@ const ProductCard = ({ product, onAddToCart, loading = false }) => {
     navigate(`/product/${product.id}`);
   };
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.stopPropagation();
-    onAddToCart(product);
+    await addToCart(product, 1);
   };
 
   const handleWishlist = (e) => {
@@ -34,15 +42,7 @@ const ProductCard = ({ product, onAddToCart, loading = false }) => {
 
   if (loading) {
     return (
-      <Card
-        sx={{
-          height: "100%",
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          borderRadius: "8px",
-        }}
-      >
+      <Card sx={{ height: "100%", width: "100%", display: "flex", flexDirection: "column", borderRadius: "8px" }}>
         <Skeleton variant="rectangular" height={200} sx={{ bgcolor: "#f0f0f0" }} />
         <CardContent sx={{ flexGrow: 1, p: 2 }}>
           <Skeleton variant="text" width="90%" height={20} />
@@ -78,7 +78,6 @@ const ProductCard = ({ product, onAddToCart, loading = false }) => {
         },
       }}
     >
-      {/* Wishlist Button */}
       <IconButton
         onClick={handleWishlist}
         sx={{
@@ -97,42 +96,18 @@ const ProductCard = ({ product, onAddToCart, loading = false }) => {
         {isWishlisted ? <Favorite sx={{ color: "#ff9900", fontSize: 18 }} /> : <FavoriteBorder sx={{ fontSize: 18 }} />}
       </IconButton>
 
-      {/* Product Image - Fixed height */}
-      <Box
-        sx={{
-          height: 200,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          bgcolor: "#fafafa",
-          p: 2,
-        }}
-      >
+      <Box sx={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "#fafafa", p: 2 }}>
         <img
           src={product.image}
           alt={product.title}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-          }}
+          style={{ width: "100%", height: "100%", objectFit: "contain" }}
           onError={(e) => {
             e.target.src = "https://via.placeholder.com/200?text=No+Image";
           }}
         />
       </Box>
 
-      {/* Card Content */}
-      <CardContent
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          p: 2,
-          pt: 1.5,
-        }}
-      >
-        {/* Product Title - Exactly 2 lines */}
+      <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", p: 2, pt: 1.5 }}>
         <Typography
           sx={{
             fontSize: "14px",
@@ -148,49 +123,22 @@ const ProductCard = ({ product, onAddToCart, loading = false }) => {
             lineHeight: 1.4,
           }}
         >
-          {product.title}
+          {productTitle}
         </Typography>
 
-        {/* Rating */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0.5,
-            mb: 1,
-          }}
-        >
-          <Rating value={product.rating?.rate || 0} precision={0.5} size="small" readOnly sx={{ color: "#ffa41c" }} />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
+          <Rating value={product.rating?.rate} precision={0.5} size="small" readOnly sx={{ color: "#ffa41c" }} />
           <Typography variant="caption" sx={{ color: "#007185" }}>
-            {product.rating?.count || 0}
+            {product.rating?.count}
           </Typography>
         </Box>
 
-        {/* Price */}
-        <Typography
-          sx={{
-            fontSize: "18px",
-            fontWeight: "bold",
-            color: "#0f1111",
-            mb: 1,
-          }}
-        >
-          {formatPrice(product.price)}
-        </Typography>
+        <Typography sx={{ fontSize: "18px", fontWeight: "bold", color: "#0f1111", mb: 1 }}>{formatPrice(productPrice)}</Typography>
 
-        {/* Delivery Info */}
-        <Typography
-          variant="caption"
-          sx={{
-            color: "#565959",
-            display: "block",
-            mb: 1.5,
-          }}
-        >
+        <Typography variant="caption" sx={{ color: "#565959", display: "block", mb: 1.5 }}>
           FREE delivery
         </Typography>
 
-        {/* Add to Cart Button */}
         <Button
           variant="contained"
           size="small"

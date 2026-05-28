@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../hooks/useCart";
 import MobileSidebar from "./MobileSidebar";
 import { AppBar, Toolbar, Typography, Box, IconButton, Badge, Container, Menu, MenuItem, InputBase, Button, useMediaQuery, useTheme, Avatar, Skeleton } from "@mui/material";
 import { ShoppingCartOutlined, Search as SearchIcon, Menu as MenuIcon, LocationOn, ExpandMore, Person2Outlined } from "@mui/icons-material";
+import { productService } from "../../services/productService";
 
-const Navbar = ({ cartCount = 0 }) => {
+const Navbar = () => {
   const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -15,8 +17,30 @@ const Navbar = ({ cartCount = 0 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const { cartCount } = useCart();
 
-  console.log("Navbar user:", user); // Debug log
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await productService.getCategories();
+        // Format category names for display
+        const formattedCategories = data.map((cat) =>
+          cat
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" "),
+        );
+        setCategories(formattedCategories);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+        // Fallback categories
+        setCategories(["Electronics", "Men's Clothing", "Women's Clothing", "Jewelery"]);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -40,11 +64,14 @@ const Navbar = ({ cartCount = 0 }) => {
     }
   };
 
+  const handleCategoryClick = (category) => {
+    navigate(`/?category=${category.toLowerCase()}`);
+  };
+
   const handleSidebarToggle = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Get user display name
   const getUserDisplayName = () => {
     if (!user) return "Sign in";
     return user.full_name?.split(" ")[0] || user.username || user.email?.split("@")[0] || "User";
@@ -308,7 +335,6 @@ const Navbar = ({ cartCount = 0 }) => {
                 </Typography>
               </IconButton>
 
-              {/* Mobile User Avatar */}
               {isMobile && (
                 <Avatar
                   sx={{
@@ -327,6 +353,7 @@ const Navbar = ({ cartCount = 0 }) => {
           </Toolbar>
         </Container>
 
+        {/* Secondary Navbar - Dynamic Categories */}
         {!isMobile && (
           <Box sx={{ bgcolor: "#232f3e", borderTop: "1px solid #37475a" }}>
             <Container maxWidth="xl">
@@ -343,16 +370,34 @@ const Navbar = ({ cartCount = 0 }) => {
                   },
                 }}
               >
-                <Typography sx={{ fontSize: "13px", color: "white", cursor: "pointer", "&:hover": { color: "#ff9900" }, display: "flex", alignItems: "center", gap: 0.5 }}>
+                <Typography
+                  onClick={() => handleCategoryClick("all")}
+                  sx={{
+                    fontSize: "13px",
+                    color: "white",
+                    cursor: "pointer",
+                    "&:hover": { color: "#ff9900" },
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                  }}
+                >
                   <MenuIcon sx={{ fontSize: 18 }} /> All
                 </Typography>
-                <Typography sx={{ fontSize: "13px", color: "white", cursor: "pointer", "&:hover": { color: "#ff9900" } }}>Today's Deals</Typography>
-                <Typography sx={{ fontSize: "13px", color: "white", cursor: "pointer", "&:hover": { color: "#ff9900" } }}>Customer Service</Typography>
-                <Typography sx={{ fontSize: "13px", color: "white", cursor: "pointer", "&:hover": { color: "#ff9900" } }}>Electronics</Typography>
-                <Typography sx={{ fontSize: "13px", color: "white", cursor: "pointer", "&:hover": { color: "#ff9900" } }}>Fashion</Typography>
-                <Typography sx={{ fontSize: "13px", color: "white", cursor: "pointer", "&:hover": { color: "#ff9900" } }}>Books</Typography>
-                <Typography sx={{ fontSize: "13px", color: "white", cursor: "pointer", "&:hover": { color: "#ff9900" } }}>Home & Kitchen</Typography>
-                <Typography sx={{ fontSize: "13px", color: "white", cursor: "pointer", "&:hover": { color: "#ff9900" } }}>Mobiles</Typography>
+                {categories.map((category) => (
+                  <Typography
+                    key={category}
+                    onClick={() => handleCategoryClick(category)}
+                    sx={{
+                      fontSize: "13px",
+                      color: "white",
+                      cursor: "pointer",
+                      "&:hover": { color: "#ff9900" },
+                    }}
+                  >
+                    {category}
+                  </Typography>
+                ))}
               </Box>
             </Container>
           </Box>

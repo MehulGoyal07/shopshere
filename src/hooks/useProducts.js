@@ -9,22 +9,26 @@ export const useProducts = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchProductsAndCategories();
+    fetchProducts();
   }, []);
 
-  const fetchProductsAndCategories = async () => {
+  const fetchProducts = async () => {
     try {
       setLoading(true);
-      const [productsData, categoriesData] = await Promise.all([productService.getAllProducts(), productService.getCategories()]);
+
+      const productsData = await productService.getAllProducts();
+      const categoriesData = await productService.getCategories();
+
       setProducts(productsData);
       setCategories(categoriesData);
       setError(null);
     } catch (err) {
+      console.error("Error fetching products:", err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  return { products, categories, loading, error, refetch: fetchProductsAndCategories };
+  return { products, categories, loading, error, refetch: fetchProducts };
 };

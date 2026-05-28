@@ -3,6 +3,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useCart } from "../hooks/useCart";
 import { Box, Container, Grid, Typography, Rating, Button, Divider, Breadcrumbs, Link, CircularProgress, Alert, Paper, IconButton, TextField, Snackbar } from "@mui/material";
 import { Home as HomeIcon, ShoppingCartOutlined, FavoriteBorder, Favorite, Remove, Add } from "@mui/icons-material";
 import { productService } from "../services/productService";
@@ -17,6 +18,7 @@ const ProductDetail = () => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const { addToCart } = useCart();
 
   useEffect(() => {
     fetchProduct();
@@ -53,7 +55,8 @@ const ProductDetail = () => {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    await addToCart(product, quantity);
     setSnackbarMessage(`Added ${quantity} item(s) to cart`);
     setShowSnackbar(true);
   };
@@ -138,9 +141,9 @@ const ProductDetail = () => {
               </Typography>
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-                <Rating value={product.rating?.rate || 0} precision={0.5} readOnly sx={{ color: "#ffa41c" }} />
+                <Rating value={product.rating || 0} precision={0.5} readOnly sx={{ color: "#ffa41c" }} />
                 <Typography variant="body2" sx={{ color: "#007185" }}>
-                  {product.rating?.count} ratings
+                  {product.rating_count} ratings
                 </Typography>
               </Box>
 
